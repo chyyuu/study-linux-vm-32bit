@@ -1,5 +1,6 @@
 #!Makefile
 
+CFLAGS = -Wall -g
 
 SUBDIRS := \
 	modules/sys_reg \
