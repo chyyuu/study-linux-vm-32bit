@@ -1,3 +1,5 @@
 Makefile
+apps/running-prog/Makefile
+apps/running-prog/main.c
 modules/sys_reg/Makefile
 modules/sys_reg/sys_reg.c

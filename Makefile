@@ -4,6 +4,7 @@ CFLAGS = -Wall -g
 
 SUBDIRS := \
 	modules/sys_reg \
+	apps/running-prog \
 
 
 
