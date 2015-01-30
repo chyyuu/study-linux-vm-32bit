@@ -27,12 +27,15 @@ gdtr_t gdtr;
 
 static int sys_reg_show(struct seq_file *m, void *v)
 {
-    int i;
+    int i, entry_num;
     u32 cr0;
     u64 *linear_gdt_addr;
 
+    seq_printf(m, "\n----  GDTR ----\n");
 
-    seq_printf(m, "addr: %08x, limit:%d\n", gdtr.address, gdtr.limit);
+    entry_num = (gdtr.limit + 1) / 8;
+
+    seq_printf(m, "addr: %08x, limit:%d, entry:%d\n", gdtr.address, gdtr.limit, entry_num);
 
     asm(" sgdt gdtr");
 
