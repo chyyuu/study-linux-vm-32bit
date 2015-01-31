@@ -6,6 +6,7 @@
 #include <linux/kdev_t.h>
 #include <linux/cdev.h>
 #include <linux/device.h>
+#include <linux/highmem.h>
 
 
 typedef unsigned char   u8;
@@ -28,20 +29,48 @@ typedef struct{
 
 phy_mem_cdev_t phy_mem_cdev;
 
-
-
 loff_t phy_mem_lseek(struct file *filp, loff_t off, int whence)
 {
-    return 0;
+    loff_t newpos;
+
+    switch(whence) {
+    case 0: /* SEEK_SET */
+        newpos = off;
+        break;
+
+    case 1: /* SEEK_CUR */
+        newpos = filp->f_pos + off;
+        break;
+
+    default: /* can't happen */
+        return -EINVAL;
+    }
+    if (newpos < 0) return -EINVAL;
+    filp->f_pos = newpos;
+    return newpos;
 }
 
 ssize_t phy_mem_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
 {
-    char* tmp = "char dev ok\n";
+    struct page *page;
+    int page_num, page_offset;
+    char *from;
 
-    copy_to_user(buf, tmp, 13);
+    page_num = *f_pos / PAGE_SIZE;
+    page_offset = *f_pos % PAGE_SIZE;
+    if(page_offset + count > PAGE_SIZE){//can't beyond one page
+        count = PAGE_SIZE - page_offset;
+    }
 
-    return 13;
+    page = pfn_to_page(page_num);
+    from = (char*)kmap(page) + page_offset;
+
+    if (copy_to_user(buf, from, count)){
+        return 0;
+    }
+
+    *f_pos += count;
+    return count;
 }
 
 static const struct file_operations phy_mem_fops =
