@@ -8,7 +8,7 @@ do
         #line include "#" is comment
         if [[ $LINE != *"#"* ]]
         then
-            files=($(find -name $LINE ))
+            files=($(find -type f -name $LINE ))
 
             #file lists
             for file in "${files[@]}"; do
