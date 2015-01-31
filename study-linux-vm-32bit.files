@@ -1,4 +1,6 @@
 Makefile
+apps/read-phy-mem/Makefile
+apps/read-phy-mem/main.c
 apps/running-prog/Makefile
 apps/running-prog/main.c
 modules/phy_mem/Makefile
