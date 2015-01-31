@@ -1,9 +1,14 @@
+#define _FILE_OFFSET_BITS 64
+#define _LARGEFILE64_SOURCE
+
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <string.h>
+#include <errno.h>
 
 
 
@@ -12,74 +17,113 @@ typedef unsigned short  u16;
 typedef signed short    s16;
 typedef int             s32;
 typedef unsigned int    u32;
+typedef unsigned int    uint32;
 typedef unsigned long long u64;
 
 
 
-
-u16 cs, ds, ss, es, fs, gs;
-
-
-
-static void get_segment_registers_info()
+uint32 utl_str2int(void *str)
 {
-    asm volatile("mov %%cs, %0" : "=r" (cs));
-    asm volatile("mov %%ds, %0" : "=r" (ds));
-    asm volatile("mov %%ss, %0" : "=r" (ss));
-    asm volatile("mov %%es, %0" : "=r" (es));
-    asm volatile("mov %%fs, %0" : "=r" (fs));
-    asm volatile("mov %%gs, %0" : "=r" (gs));
+    uint32 rst=0;
+    uint32  i,tmp=0,len;
+    uint32 sign,val;
+    char *ptr = str;
 
-    printf("cs :%04x, TI = %s, Index = %d, RPL = %d\n", cs, (cs & 0x04) ? "LDT" : "GDT", cs >> 3, cs & 0x03);
-    printf("ds :%04x, TI = %s, Index = %d, RPL = %d\n", ds, (ds & 0x04) ? "LDT" : "GDT", ds >> 3, ds & 0x03);
-    printf("ss :%04x, TI = %s, Index = %d, RPL = %d\n", ss, (ss & 0x04) ? "LDT" : "GDT", ss >> 3, ss & 0x03);
-    printf("es :%04x, TI = %s, Index = %d, RPL = %d\n", es, (es & 0x04) ? "LDT" : "GDT", es >> 3, es & 0x03);
-    printf("fs :%04x, TI = %s, Index = %d, RPL = %d\n", fs, (fs & 0x04) ? "LDT" : "GDT", fs >> 3, fs & 0x03);
-    printf("gs :%04x, TI = %s, Index = %d, RPL = %d\n", gs, (gs & 0x04) ? "LDT" : "GDT", gs >> 3, gs & 0x03);
+    len = strlen((char *)ptr);
+    if((ptr[1]=='x')||(ptr[1]=='X')){//HEX
+        ptr +=2;
+        for (i=2;i<len;i++) {
+            tmp = *ptr++;
+            if ((tmp<='9') && (tmp>='0')) {
+                tmp = tmp -'0';
+                rst = (rst<<4) + tmp;
+            }
+            else if ((tmp<='F') && (tmp>='A')) {
+                tmp = tmp -'A' + 10;
+                rst = (rst<<4) + tmp;
+            }
+            else if ((tmp<='f') && (tmp>='a')) {
+                tmp = tmp -'a' + 10;
+                rst = (rst<<4) + tmp;
+            }
+            else break;
+            //rst = (rst<<4) + tmp;
+        }
+        return rst;
+    }
+    else{
+        for (i = 0;; i++) {
+            if (ptr[i] != ' ') {
+                break;
+            }
+        }
+        sign = (ptr[i] == '-' ?  - 1: 1);
+        if (ptr[i] == '+' || ptr[i] == '-') {
+            i++;
+        }
+        for (val = 0;; i++) {
+            if (ptr[i] >= '0' && ptr[i] <= '9') {
+                val = 10 * val + (ptr[i] - '0');
+            } else {
+                break;
+            }
+        }
+        return  sign*val;
+    }
 }
 
 
-static void print_sys_reg_info()
-{
-    char *buf;
-    int rd_size;
 
-    int fd = open("/proc/sys_reg", O_RDONLY);
+int main(int argc, char *argv[])
+{
+    if(argc != 3){
+        printf("args invalid\n");
+        return 0;
+    }
+
+    u32 addr = utl_str2int(argv[1]);
+    u32 size = utl_str2int(argv[2]);
+
+    printf("read from 0x%08X, size %d\n", addr, size);
+
+
+    int fd = open("/dev/phy_mem", O_RDONLY);
     if(fd < 0){
-        printf("open failed\n");
-        return;
+        printf("phy_mem open fail\n");
+        return 0;
     }
 
-    buf = (char*)malloc(4096);
-    if(buf == NULL){
-        printf("malloc failed\n");
-        return;
+    addr = addr & 0xFFFFFFF8;
+    if(size > 256){
+        size = 256;
     }
+    size = (size + 8) & 0xFFFFFFF8;
 
-    rd_size = read(fd, buf, 4096 - 1);
-    if(rd_size < 0){
+    int ret = lseek64(fd, addr, SEEK_SET);
+    printf("lseek64: addr:%08x, ret: %d, errno:%d\n", addr, ret, errno);
+
+    char buf[256];
+    int read_size = read(fd, buf, size);
+    if(read_size < 0){
         printf("read failed\n");
-        return;
+        return 0;
     }
 
-    buf[rd_size] = 0;
+    u64 *p = (u64*)buf;
 
-    printf("%s", buf);
-
-    close(fd);
-}
-
-
-int a;
+    int i;
+    for(i = 0; i< 16; i++){
+        printf("%2d: %016llX\n", i, *(p+i));
+    }
 
 
-int main()
-{
-    a = 0x13579;
 
-    get_segment_registers_info();
 
-    print_sys_reg_info();
+
+
+
+
+
 
     return 0;
 }

@@ -31,6 +31,8 @@ phy_mem_cdev_t phy_mem_cdev;
 
 loff_t phy_mem_lseek(struct file *filp, loff_t off, int whence)
 {
+    printk("lseek: off:%lld, whence:%d\n", off, whence);
+
     loff_t newpos;
 
     switch(whence) {
@@ -43,9 +45,13 @@ loff_t phy_mem_lseek(struct file *filp, loff_t off, int whence)
         break;
 
     default: /* can't happen */
+        printk("lseek default\n");
         return -EINVAL;
     }
-    if (newpos < 0) return -EINVAL;
+    if (newpos < 0){
+        printk("newpos < 0, \n");
+        return -EINVAL;
+    }
     filp->f_pos = newpos;
     return newpos;
 }
@@ -62,8 +68,12 @@ ssize_t phy_mem_read(struct file *filp, char __user *buf, size_t count, loff_t *
         count = PAGE_SIZE - page_offset;
     }
 
+    printk("read addr %08X (%d:%d)\n", *f_pos, page_num, page_offset );
+
     page = pfn_to_page(page_num);
     from = (char*)kmap(page) + page_offset;
+
+
 
     if (copy_to_user(buf, from, count)){
         return 0;
