@@ -75,10 +75,7 @@ int a;
 
 int main()
 {
-    int b;
     a = 0x13579;
-
-    b = 0x13579;
 
     get_segment_registers_info();
 

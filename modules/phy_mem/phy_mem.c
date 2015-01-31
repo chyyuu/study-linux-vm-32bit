@@ -2,13 +2,11 @@
 #include <linux/proc_fs.h>
 #include <linux/sched.h>
 #include <linux/fs.h>
-#include <asm/uaccess.h>
-#include <asm/desc.h>
-#include <asm/pgtable.h>
-#include <asm/desc.h>
+#include <linux/types.h>
+#include <linux/kdev_t.h>
+#include <linux/cdev.h>
+#include <linux/device.h>
 
-#include <linux/seq_file.h>
-#include <asm/processor.h>
 
 typedef unsigned char   u8;
 typedef unsigned short  u16;
@@ -18,90 +16,83 @@ typedef unsigned int    u32;
 typedef unsigned long long u64;
 
 
+#define PHY_DEV_NAME "phy_mem"
+
+
 typedef struct{
-   short limit;
-   unsigned int address;
-}__attribute__((packed)) gdtr_t;
+    struct cdev cdev;
 
-gdtr_t gdtr;
+    dev_t dev;
+    struct class* class;
+}phy_mem_cdev_t;
 
-static int sys_reg_show(struct seq_file *m, void *v)
+phy_mem_cdev_t phy_mem_cdev;
+
+
+
+loff_t phy_mem_lseek(struct file *filp, loff_t off, int whence)
 {
-    int i, entry_num;
-    u32 cr0;
-    u64 *linear_gdt_addr;
-
-    seq_printf(m, "\n----  GDTR ----\n");
-
-    entry_num = (gdtr.limit + 1) / 8;
-
-    seq_printf(m, "addr: %08x, limit:%d, entry:%d\n", gdtr.address, gdtr.limit, entry_num);
-
-    asm(" sgdt gdtr");
-
-    seq_printf(m, "addr: %08x, limit:%d\n", gdtr.address, gdtr.limit);
-
-    linear_gdt_addr = (u64*)gdtr.address;
-    for(i = 0; i < 32; i++){
-        u64 value = *(linear_gdt_addr + i);
-        u32 h, l, base, limit;
-
-        h = (u32)(value >> 32);
-        l = (u32)(value & 0xFFFFFFFF);
-
-        base = ((h >> 24) & 0xFF) << 24;
-        base |= (h & 0xFF) << 16;
-        base |= (l >> 16) & 0xFFFF;
-
-        limit = ((h >> 16) & 0xF) << 16;
-        limit |= l & 0xFFFF;
-
-
-
-        seq_printf(m, "%2d: %016llx  base:%08x  limit:%d\n", i, *(linear_gdt_addr + i), base, limit);
-    }
-
-
-
-
-    cr0 = read_cr0();
-    seq_printf(m, "cr0 = %08x\n", cr0);
-
-    seq_printf(m, "Hello proc from zi \n");
-
     return 0;
 }
 
-static int sys_reg_open(struct inode *inode, struct file *file)
+ssize_t phy_mem_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
 {
-    return single_open(file, sys_reg_show, NULL);
+    char* tmp = "char dev ok\n";
+
+    copy_to_user(buf, tmp, 13);
+
+    return 13;
 }
 
-
-
-static const struct file_operations sys_reg_fops =
+static const struct file_operations phy_mem_fops =
 {
     .owner      = THIS_MODULE,
-    .open       = sys_reg_open,
-    .read       = seq_read,
-    .llseek     = seq_lseek,
-    .release    = single_release,
+    .llseek     = phy_mem_lseek,
+    .read       = phy_mem_read,
 };
 
 
-static int __init sys_reg_init(void) {
-    proc_create("sys_reg", 0, NULL, &sys_reg_fops);
+static int __init phy_mem_init(void) {
+    int ret;
+
+    ret = alloc_chrdev_region(&phy_mem_cdev.dev, 0, 1, PHY_DEV_NAME);
+    if(ret < 0){
+        printk("alloc fail\n");
+        return ret;
+    }
+
+    cdev_init(&phy_mem_cdev.cdev, &phy_mem_fops);
+    phy_mem_cdev.cdev.owner = THIS_MODULE;
+
+
+    ret = cdev_add(&phy_mem_cdev.cdev, phy_mem_cdev.dev, 1);
+    if(ret < 0){
+        printk("cdev add failed \n");
+        return ret;
+    }
+
+    phy_mem_cdev.class = class_create(THIS_MODULE, "phy_mem");
+    device_create(phy_mem_cdev.class, NULL, phy_mem_cdev.dev, NULL, "phy_mem");
+
+    printk("phy_mem dev init done\n");
     return 0;
 }
 
-static void __exit sys_reg_exit(void) {
-    remove_proc_entry("sys_reg", NULL);
+static void __exit phy_mem_exit(void) {
+    device_destroy(phy_mem_cdev.class, phy_mem_cdev.dev);
+    class_destroy(phy_mem_cdev.class);
+
+    cdev_del(&phy_mem_cdev.cdev);
+
+    unregister_chrdev_region(phy_mem_cdev.dev, 1);
+
+    printk("phy_mem dev exit done\n");
 }
 
 
 MODULE_LICENSE("GPL");
-module_init(sys_reg_init)
-module_exit(sys_reg_exit)
+module_init(phy_mem_init)
+module_exit(phy_mem_exit)
 
 
 
