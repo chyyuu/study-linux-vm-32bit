@@ -38,4 +38,4 @@ Module.symvers
 *.hex
 *.creator.user
 running-prog
-
+read-phy-mem

@@ -6,6 +6,7 @@ SUBDIRS := \
 	modules/sys_reg \
 	modules/phy_mem \
 	apps/running-prog \
+	apps/read-phy-mem \
 
 
 
