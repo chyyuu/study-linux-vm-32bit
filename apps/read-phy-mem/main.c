@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
 
     int i;
     for(i = 0; i< size / 8; i++){
-        printf("%#llX:\t\t %08x  %08x \n", addr, buf[2 * i], buf[2 * i + 1]);
+        printf("%#llX:\t\t %08x  %08x \n", addr + i * 8, buf[2 * i], buf[2 * i + 1]);
     }
 
     close(fd);

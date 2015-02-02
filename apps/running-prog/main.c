@@ -30,6 +30,7 @@ static void get_segment_registers_info()
     asm volatile("mov %%fs, %0" : "=r" (fs));
     asm volatile("mov %%gs, %0" : "=r" (gs));
 
+    printf("\n----  Segment Registers ----\n");
     printf("cs :%04x, TI = %s, Index = %d, RPL = %d\n", cs, (cs & 0x04) ? "LDT" : "GDT", cs >> 3, cs & 0x03);
     printf("ds :%04x, TI = %s, Index = %d, RPL = %d\n", ds, (ds & 0x04) ? "LDT" : "GDT", ds >> 3, ds & 0x03);
     printf("ss :%04x, TI = %s, Index = %d, RPL = %d\n", ss, (ss & 0x04) ? "LDT" : "GDT", ss >> 3, ss & 0x03);
@@ -75,11 +76,17 @@ int a;
 
 int main()
 {
-    a = 0x13579;
+    a = 0x013579BB;
+    printf("a = %08X, addr: 0x%08X \n", a, &a);
 
     get_segment_registers_info();
 
     print_sys_reg_info();
+
+
+    while(1){
+        sleep(100);
+    }
 
     return 0;
 }

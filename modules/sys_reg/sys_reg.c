@@ -27,47 +27,29 @@ gdtr_t gdtr;
 
 static int sys_reg_show(struct seq_file *m, void *v)
 {
-    int i, entry_num;
-    u32 cr0;
-    u64 *linear_gdt_addr;
+    int entry_num;
+    u32 cr0, cr3, cr4;
 
     seq_printf(m, "\n----  GDTR ----\n");
-
-    entry_num = (gdtr.limit + 1) / 8;
-
-    seq_printf(m, "addr: %08x, limit:%d, entry:%d\n", gdtr.address, gdtr.limit, entry_num);
-
     asm(" sgdt gdtr");
 
-    seq_printf(m, "addr: %08x, limit:%d\n", gdtr.address, gdtr.limit);
-
-    linear_gdt_addr = (u64*)gdtr.address;
-    for(i = 0; i < 32; i++){
-        u64 value = *(linear_gdt_addr + i);
-        u32 h, l, base, limit;
-
-        h = (u32)(value >> 32);
-        l = (u32)(value & 0xFFFFFFFF);
-
-        base = ((h >> 24) & 0xFF) << 24;
-        base |= (h & 0xFF) << 16;
-        base |= (l >> 16) & 0xFFFF;
-
-        limit = ((h >> 16) & 0xF) << 16;
-        limit |= l & 0xFFFF;
+    entry_num = (gdtr.limit + 1) / 8;
+    seq_printf(m, "addr: 0x%08X, limit:%d, entry:%d\n", gdtr.address, gdtr.limit, entry_num);
 
 
-
-        seq_printf(m, "%2d: %016llx  base:%08x  limit:%d\n", i, *(linear_gdt_addr + i), base, limit);
-    }
-
-
-
+    seq_printf(m, "\n----  Control Registers ----\n");
 
     cr0 = read_cr0();
-    seq_printf(m, "cr0 = %08x\n", cr0);
+    seq_printf(m, "CR0 = 0x%08X\n", cr0);
+    seq_printf(m, "CR0.PG = %d\n", cr0 >> 31);
 
-    seq_printf(m, "Hello proc from zi \n");
+    cr4 = read_cr4();
+    seq_printf(m, "CR4 = 0x%08X\n", cr4);
+    seq_printf(m, "CR4.PAE = %d\n", (cr4 >> 5) & 0x1);
+
+    cr3 = read_cr3();
+    seq_printf(m, "cr3 = 0x%08X\n", cr3);
+    seq_printf(m, "CR3 PT Base = 0x%08X\n", cr3 & 0xFFFFF000);;
 
     return 0;
 }
