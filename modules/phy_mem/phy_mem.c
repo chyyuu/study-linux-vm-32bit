@@ -31,9 +31,9 @@ phy_mem_cdev_t phy_mem_cdev;
 
 loff_t phy_mem_lseek(struct file *filp, loff_t off, int whence)
 {
-    printk("lseek: off:%lld, whence:%d\n", off, whence);
-
     loff_t newpos;
+
+    printk("lseek: off:%lld, whence:%d\n", off, whence);
 
     switch(whence) {
     case 0: /* SEEK_SET */
@@ -61,6 +61,7 @@ ssize_t phy_mem_read(struct file *filp, char __user *buf, size_t count, loff_t *
     struct page *page;
     int page_num, page_offset;
     char *from;
+    u32 ret;
 
     page_num = *f_pos / PAGE_SIZE;
     page_offset = *f_pos % PAGE_SIZE;
@@ -68,12 +69,15 @@ ssize_t phy_mem_read(struct file *filp, char __user *buf, size_t count, loff_t *
         count = PAGE_SIZE - page_offset;
     }
 
-    printk("read addr %08X (%d:%d)\n", *f_pos, page_num, page_offset );
+    printk("read addr %16llX (%d:%d)\n", *f_pos, page_num, page_offset );
 
     page = pfn_to_page(page_num);
     from = (char*)kmap(page) + page_offset;
 
-    if(copy_to_user(buf, from, count)){
+    ret = copy_to_user(buf, from, count);
+
+    if(ret){
+        printk("copy fail ret %d, %p, %p, %d\n", ret, buf, from, (int)count);
         kunmap(page);
         return -EFAULT;
     }

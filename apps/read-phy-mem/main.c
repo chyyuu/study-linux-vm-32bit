@@ -81,10 +81,10 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    u32 addr = utl_str2int(argv[1]);
+    u64 addr = (u64)utl_str2int(argv[1]);
     u32 size = utl_str2int(argv[2]);
 
-    printf("read from 0x%08X, size %d\n", addr, size);
+    printf("read from 0x%llX, size %d\n", addr, size);
 
 
     int fd = open("/dev/phy_mem", O_RDONLY);
@@ -97,32 +97,30 @@ int main(int argc, char *argv[])
     if(size > 256){
         size = 256;
     }
-    size = (size + 8) & 0xFFFFFFF8;
+    if(size == 0){
+        size = 8;
+    }
+    size = (size + 7) & 0xFFFFFFF8;
 
-    int ret = lseek64(fd, addr, SEEK_SET);
-    printf("lseek64: addr:%08x, ret: %d, errno:%d\n", addr, ret, errno);
+    __off64_t off = lseek64(fd, addr, SEEK_SET);
+    if(off < 0){
+        printf("lseek fail\n");
+        return 0;
+    }
 
-    char buf[256];
-    int read_size = read(fd, buf, size);
+    u32 buf[256 / 4];
+    int read_size = read(fd, (char*)buf, size);
     if(read_size < 0){
         printf("read failed\n");
         return 0;
     }
 
-    u64 *p = (u64*)buf;
-
     int i;
-    for(i = 0; i< 16; i++){
-        printf("%2d: %016llX\n", i, *(p+i));
+    for(i = 0; i< size / 8; i++){
+        printf("%#llX:\t\t %08x  %08x \n", addr, buf[2 * i], buf[2 * i + 1]);
     }
 
-
-
-
-
-
-
-
+    close(fd);
 
 
     return 0;
