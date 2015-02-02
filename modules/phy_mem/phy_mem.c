@@ -73,11 +73,11 @@ ssize_t phy_mem_read(struct file *filp, char __user *buf, size_t count, loff_t *
     page = pfn_to_page(page_num);
     from = (char*)kmap(page) + page_offset;
 
-
-
-    if (copy_to_user(buf, from, count)){
-        return 0;
+    if(copy_to_user(buf, from, count)){
+        kunmap(page);
+        return -EFAULT;
     }
+    kunmap(page);
 
     *f_pos += count;
     return count;
