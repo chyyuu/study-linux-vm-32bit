@@ -1,5 +1,7 @@
 # study-linux-vm-32bit
 
+[study-linux-vm-32bit](https://github.com/ziyang3721/study-linux-vm-32bit)
+
 本文是配合 [该文章](http://ziyang3721.github.io/2015/02/02/study-linux-vm-32bit.html)  使用.
 
 # 使用方式
